@@ -1,0 +1,126 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: fittrackpro-postgres
+    environment:
+      POSTGRES_DB: FitTrackProDb
+      POSTGRES_USER: fittrack_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_ENV}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fittrackpro-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fittrack_user -d FitTrackProDb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: fittrackpro-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fittrackpro-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Seq Logging
+  seq:
+    image: datalust/seq:latest
+    container_name: fittrackpro-seq
+    environment:
+      ACCEPT_EULA: Y
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_PASSWORD_ENV}
+    ports:
+      - "5341:80"
+    volumes:
+      - seq_data:/data
+    networks:
+      - fittrackpro-network
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: fittrackpro-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - fittrackpro-network
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # pgAdmin (Quản lý Database)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fittrackpro-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@fittrackpro.com
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD_ENV}
+    ports:
+      - "5050:80"
+    networks:
+      - fittrackpro-network
+    depends_on:
+      - postgres # Chỉ đợi postgres khởi động, không cần đợi healthy
+
+  # API Application (Ứng dụng của bạn)
+  api:
+    build:
+      context: .
+      dockerfile: src/FitTrackPro.API/Dockerfile
+    container_name: fittrackpro-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FitTrackProDb;Username=fittrack_user;Password=${POSTGRES_PASSWORD_ENV}
+      - ConnectionStrings__Redis=redis:6379
+      - ConnectionStrings__Elasticsearch=http://elasticsearch:9200
+      - Jwt__Secret=${JWT_SECRET_ENV}
+      - Jwt__Issuer=FitTrackPro
+      - Jwt__Audience=FitTrackProUsers
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
+    ports:
+      - "5000:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - fittrackpro-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  seq_data:
+  elasticsearch_data:
+
+networks:
+  fittrackpro-network:
+    driver: bridge
