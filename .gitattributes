@@ -4,6 +4,6 @@
 *.ps1 text eol=crlf
 *.cs text diff=csharp
 *.json text
-*.yml text
+*.yml text eol=lf
 *.yaml text
 *.md text
