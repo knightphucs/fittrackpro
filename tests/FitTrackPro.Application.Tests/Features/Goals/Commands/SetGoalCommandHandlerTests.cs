@@ -43,7 +43,7 @@ public class SetGoalCommandHandlerTests
         user.UpdateProfile(
             "John",
             "Doe",
-            new DateTime(1990, 1, 1),
+            new DateOnly(1990, 1, 1),
             0,
             180m
         );

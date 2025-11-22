@@ -20,7 +20,7 @@ public class UpdateProfileCommandValidator : AbstractValidator<UpdateProfileComm
             .WithMessage("Height must be positive");
 
         RuleFor(x => x.DateOfBirth)
-            .LessThan(DateTime.Today).When(x => x.DateOfBirth.HasValue)
+            .Must(d => !d.HasValue || d.Value < DateOnly.FromDateTime(DateTime.Today))
             .WithMessage("Date of birth must be in the past");
     }
 }

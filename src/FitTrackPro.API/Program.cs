@@ -9,6 +9,7 @@ using FitTrackPro.Infrastructure.Persistence;
 using FitTrackPro.API.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using FitTrackPro.Infrastructure.Persistence.Seed;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +25,12 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 // Swagger with JWT support

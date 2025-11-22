@@ -1,4 +1,4 @@
-namespace FitTrackPro.API.IntegrationTests.Services.Authentication; 
+namespace FitTrackPro.API.IntegrationTests.Services.Authentication;
 
 using System.Security.Claims;
 using FitTrackPro.Application.Common.Interfaces;

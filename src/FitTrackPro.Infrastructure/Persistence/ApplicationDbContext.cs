@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using FitTrackPro.Application.Common.Interfaces;
 using FitTrackPro.Domain.Entities;
 using FitTrackPro.Domain.Common;
+using FitTrackPro.Infrastructure.Persistence.Converters;
 
 public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
@@ -20,8 +21,24 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        // Enforce UTC for all DateTimes
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime))
+                {
+                    property.SetValueConverter(new UtcDateTimeConverter());
+                }
+                else if (property.ClrType == typeof(DateTime?))
+                {
+                    property.SetValueConverter(new NullableUtcDateTimeConverter());
+                }
+            }
+        }
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

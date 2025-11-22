@@ -30,7 +30,7 @@ public class GoalsControllerTests : IntegrationTestBase
         {
             FirstName = "John",
             LastName = "Doe",
-            DateOfBirth = new DateTime(1990, 1, 1),
+            DateOfBirth = new DateOnly(1990, 1, 1),
             Gender = Gender.Male,
             Height = 175m
         };

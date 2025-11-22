@@ -12,7 +12,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        ISystemClock clock) 
+        ISystemClock clock)
         : base(options, logger, encoder, clock) { }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()

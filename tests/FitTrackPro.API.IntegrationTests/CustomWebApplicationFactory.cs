@@ -3,6 +3,7 @@ namespace FitTrackPro.API.IntegrationTests;
 using System.Data.Common;
 using FitTrackPro.API.IntegrationTests.Authentication;
 using FitTrackPro.API.IntegrationTests.Services.Authentication;
+using FitTrackPro.API.IntegrationTests.Services.Caching;
 using FitTrackPro.API.IntegrationTests.Services.Email;
 using FitTrackPro.Application.Common.Interfaces;
 using FitTrackPro.Infrastructure.Persistence;
@@ -41,6 +42,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<ApplicationDbContext>(o => o.UseSqlite(_connection));
             services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+
+            // Register the Fake Cache Service
+            services.AddSingleton<ICacheService, FakeCacheService>();
 
             // Add test versions of missing services
             services.AddScoped<IPasswordHasher, PasswordHasher>();

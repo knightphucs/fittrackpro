@@ -10,7 +10,7 @@ public class User : BaseEntity, IAuditableEntity
     public string PasswordHash { get; private set; } = default!;
     public string FirstName { get; private set; } = default!;
     public string LastName { get; private set; } = default!;
-    public DateTime? DateOfBirth { get; private set; }
+    public DateOnly? DateOfBirth { get; private set; }
     public Gender? Gender { get; private set; }
     public decimal? Height { get; private set; } // cm
     public string? ProfilePhotoUrl { get; private set; }
@@ -54,7 +54,7 @@ public class User : BaseEntity, IAuditableEntity
     public void UpdateProfile(
         string firstName,
         string lastName,
-        DateTime? dateOfBirth,
+        DateOnly? dateOfBirth,
         Gender? gender,
         decimal? height)
     {
@@ -84,9 +84,9 @@ public class User : BaseEntity, IAuditableEntity
     {
         if (!DateOfBirth.HasValue) return null;
 
-        var today = DateTime.Today;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var age = today.Year - DateOfBirth.Value.Year;
-        if (DateOfBirth.Value.Date > today.AddYears(-age)) age--;
+        if (DateOfBirth.Value > today.AddYears(-age)) age--;
 
         return age;
     }

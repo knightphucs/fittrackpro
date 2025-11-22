@@ -215,8 +215,8 @@ namespace FitTrackPro.Infrastructure.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("timestamp without time zone");
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
 
                     b.Property<string>("Email")
                         .IsRequired()

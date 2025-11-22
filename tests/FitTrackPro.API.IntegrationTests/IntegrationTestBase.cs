@@ -9,6 +9,8 @@ using Xunit;
 using FitTrackPro.Application.Features.Users.Commands.Register;
 using FitTrackPro.Application.Features.Users.DTOs;
 using FitTrackPro.Infrastructure.Persistence;
+using FitTrackPro.Domain.Entities;
+using FitTrackPro.Domain.ValueObjects;
 
 public class IntegrationTestBase : IClassFixture<CustomWebApplicationFactory>
 {
@@ -62,5 +64,29 @@ public class IntegrationTestBase : IClassFixture<CustomWebApplicationFactory>
     protected void ClearAuthorizationHeader()
     {
         Client.DefaultRequestHeaders.Authorization = null;
+    }
+
+    protected async Task<Food> SeedFoodAsync(string name = "Test Food", int calories = 100)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var macros = new MacroNutrients(10m, 5m, 2m);
+
+        var food = Food.Create(
+            name: name,
+            nameVi: null,
+            category: "Test Category",
+            servingSize: 100,
+            servingUnit: "g",
+            calories: calories,
+            macros: macros,
+            isUserCreated: false
+        );
+
+        context.Foods.Add(food);
+        await context.SaveChangesAsync();
+
+        return food;
     }
 }

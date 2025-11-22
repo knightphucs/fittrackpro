@@ -9,6 +9,8 @@ using Xunit;
 using FitTrackPro.Application.Features.Users.Commands.UpdateProfile;
 using FitTrackPro.Application.Features.Users.DTOs;
 using FitTrackPro.Domain.Enums;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 public class UsersControllerTests : IntegrationTestBase
 {
@@ -59,7 +61,7 @@ public class UsersControllerTests : IntegrationTestBase
         {
             FirstName = "Updated",
             LastName = "Name",
-            DateOfBirth = new DateTime(1990, 1, 1),
+            DateOfBirth = new DateOnly(1990, 1, 1),
             Gender = Gender.Male,
             Height = 175m
         };
@@ -72,11 +74,18 @@ public class UsersControllerTests : IntegrationTestBase
 
         // Verify the update
         var profileResponse = await Client.GetAsync("/api/users/profile");
-        var profile = await profileResponse.Content.ReadFromJsonAsync<UserProfileDto>();
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        jsonOptions.Converters.Add(new JsonStringEnumConverter());
+
+        var profile = await profileResponse.Content
+            .ReadFromJsonAsync<UserProfileDto>(jsonOptions);
 
         profile!.FirstName.Should().Be("Updated");
         profile.LastName.Should().Be("Name");
-        profile.DateOfBirth.Should().Be(new DateTime(1990, 1, 1));
+        profile.DateOfBirth.Should().Be(new DateOnly(1990, 1, 1));
         profile.Gender.Should().Be(Gender.Male);
         profile.Height.Should().Be(175m);
     }

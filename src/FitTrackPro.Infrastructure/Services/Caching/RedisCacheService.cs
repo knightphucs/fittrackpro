@@ -8,6 +8,11 @@ public class RedisCacheService : ICacheService
 {
     private readonly IDistributedCache _cache;
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     public RedisCacheService(IDistributedCache cache)
     {
         _cache = cache;
@@ -20,7 +25,7 @@ public class RedisCacheService : ICacheService
         if (string.IsNullOrEmpty(value))
             return default;
 
-        return JsonSerializer.Deserialize<T>(value);
+        return JsonSerializer.Deserialize<T>(value, _jsonOptions);
     }
 
     public async Task SetAsync<T>(
@@ -34,7 +39,7 @@ public class RedisCacheService : ICacheService
             AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromHours(1)
         };
 
-        var serializedValue = JsonSerializer.Serialize(value);
+        var serializedValue = JsonSerializer.Serialize(value, _jsonOptions);
         await _cache.SetStringAsync(key, serializedValue, options, cancellationToken);
     }
 

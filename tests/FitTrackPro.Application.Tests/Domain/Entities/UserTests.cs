@@ -63,7 +63,7 @@ public class UserTests
         user.UpdateProfile(
             "John",
             "Doe",
-            new DateTime(year, month, day),
+            new DateOnly(year, month, day),
             Gender.Male,
             175m);
 
@@ -105,14 +105,14 @@ public class UserTests
         user.UpdateProfile(
             "Jane",
             "Smith",
-            new DateTime(1990, 1, 1),
+            new DateOnly(1990, 1, 1),
             Gender.Female,
             165m);
 
         // Assert
         user.FirstName.Should().Be("Jane");
         user.LastName.Should().Be("Smith");
-        user.DateOfBirth.Should().Be(new DateTime(1990, 1, 1));
+        user.DateOfBirth.Should().Be(new DateOnly(1990, 1, 1));
         user.Gender.Should().Be(Gender.Female);
         user.Height.Should().Be(165m);
     }

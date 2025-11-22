@@ -9,7 +9,7 @@ public class UserProfileDto
     public string FirstName { get; init; } = default!;
     public string LastName { get; init; } = default!;
     public string FullName { get; init; } = default!;
-    public DateTime? DateOfBirth { get; init; }
+    public DateOnly? DateOfBirth { get; init; }
     public int? Age { get; init; }
     public Gender? Gender { get; init; }
     public decimal? Height { get; init; }

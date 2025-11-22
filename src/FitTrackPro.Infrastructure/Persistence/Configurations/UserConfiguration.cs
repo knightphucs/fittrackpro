@@ -13,10 +13,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.DateOfBirth)
-            .HasColumnType("timestamp without time zone")
-            .HasConversion(
-                v => v,
-                v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : null);
+            .HasColumnType("date"); // Forces PostgreSQL 'date' column
 
         builder.Property(u => u.Email)
             .IsRequired()

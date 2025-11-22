@@ -39,7 +39,7 @@ public class UpdateProfileCommandHandlerTests
             UserId = userId,
             FirstName = "Jane",
             LastName = "Smith",
-            DateOfBirth = new DateTime(1990, 1, 1),
+            DateOfBirth = new DateOnly(1990, 1, 1),
             Gender = Gender.Female,
             Height = 165m,
         };

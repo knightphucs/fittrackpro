@@ -42,7 +42,7 @@ public class CompleteUserJourneyTests : IntegrationTestBase
         {
             FirstName = "John",
             LastName = "Doe",
-            DateOfBirth = new DateTime(1990, 6, 15),
+            DateOfBirth = new DateOnly(1990, 6, 15),
             Gender = Gender.Male,
             Height = 178m
         };
