@@ -168,7 +168,8 @@ internal class TestAsyncQueryProvider<TEntity> : IAsyncQueryProvider
 
     public object Execute(Expression expression)
     {
-        return _inner.Execute(expression);
+        var result = _inner.Execute(expression);
+        return result!;
     }
 
     public TResult Execute<TResult>(Expression expression)
@@ -195,8 +196,14 @@ internal class TestAsyncQueryProvider<TEntity> : IAsyncQueryProvider
             var executionResult = executeMethod.Invoke(_inner, new object[] { expression });
 
             // Return Task.FromResult((innerResultType)executionResult) cast to TResult
-            var taskFromResultMethod = typeof(Task).GetMethod(nameof(Task.FromResult)).MakeGenericMethod(innerResultType);
-            return (TResult)taskFromResultMethod.Invoke(null, new[] { executionResult });
+            var taskFromResultMethodInfo = typeof(Task).GetMethod(nameof(Task.FromResult), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (taskFromResultMethodInfo == null)
+            {
+                throw new InvalidOperationException("Unable to find Task.FromResult method via reflection.");
+            }
+            var taskFromResultMethod = taskFromResultMethodInfo.MakeGenericMethod(innerResultType);
+            var taskObj = taskFromResultMethod.Invoke(null, [executionResult]) ?? throw new InvalidOperationException("Task.FromResult returned null.");
+            return (TResult)taskObj;
         }
 
         // Otherwise fall back to sync Execute<TResult>

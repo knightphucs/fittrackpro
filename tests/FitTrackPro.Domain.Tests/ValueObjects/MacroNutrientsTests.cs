@@ -1,4 +1,4 @@
-namespace FitTrackPro.Application.Tests.Domain.ValueObjects;
+namespace FitTrackPro.Domain.Tests.ValueObjects;
 
 using FluentAssertions;
 using Xunit;

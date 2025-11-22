@@ -1,4 +1,4 @@
-namespace FitTrackPro.Application.Tests.Domain.Entities;
+namespace FitTrackPro.Domain.Tests.Entities;
 
 using FluentAssertions;
 using Xunit;
