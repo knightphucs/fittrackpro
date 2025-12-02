@@ -55,4 +55,30 @@ public class ProgressEntry : BaseEntity, IAuditableEntity
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    public void Update(
+        decimal weight,
+        DateTime recordedAt,
+        decimal? bodyFatPercentage = null,
+        decimal? chest = null,
+        decimal? waist = null,
+        decimal? hips = null,
+        decimal? arms = null,
+        decimal? legs = null,
+        string? notes = null)
+    {
+        if (weight <= 0)
+            throw new ArgumentException("Weight must be positive", nameof(weight));
+
+        Weight = weight;
+        BodyFatPercentage = bodyFatPercentage;
+        Chest = chest;
+        Waist = waist;
+        Hips = hips;
+        Arms = arms;
+        Legs = legs;
+        Notes = notes;
+        RecordedAt = recordedAt;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

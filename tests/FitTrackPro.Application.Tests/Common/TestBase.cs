@@ -3,6 +3,8 @@ namespace FitTrackPro.Application.Tests.Common;
 using Moq;
 using FitTrackPro.Application.Common.Interfaces;
 using FitTrackPro.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using FitTrackPro.Application.Tests.Features.Users.Commands;
 
 public class TestBase
 {
@@ -31,5 +33,25 @@ public class TestBase
 
         JwtTokenGeneratorMock.Setup(x => x.GenerateRefreshToken())
             .Returns("refresh_token");
+    }
+
+    public static Mock<DbSet<T>> CreateDbSetMock<T>(IQueryable<T> data) where T : class
+    {
+        var mockSet = new Mock<DbSet<T>>();
+
+        // Async support
+        mockSet.As<IAsyncEnumerable<T>>()
+            .Setup(m => m.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
+            .Returns(new TestAsyncEnumerator<T>(data.GetEnumerator()));
+
+        mockSet.As<IQueryable<T>>()
+            .Setup(m => m.Provider)
+            .Returns(new TestAsyncQueryProvider<T>(data.Provider));
+
+        mockSet.As<IQueryable<T>>().Setup(m => m.Expression).Returns(data.Expression);
+        mockSet.As<IQueryable<T>>().Setup(m => m.ElementType).Returns(data.ElementType);
+        mockSet.As<IQueryable<T>>().Setup(m => m.GetEnumerator()).Returns(data.GetEnumerator());
+
+        return mockSet;
     }
 }

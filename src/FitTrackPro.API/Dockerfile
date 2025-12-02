@@ -25,4 +25,7 @@ RUN dotnet publish "FitTrackPro.API.csproj" -c Release -o /app/publish /p:UseApp
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+RUN mkdir -p /app/uploads
+
 ENTRYPOINT ["dotnet", "FitTrackPro.API.dll"]

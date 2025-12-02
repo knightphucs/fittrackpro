@@ -8,6 +8,7 @@ using FitTrackPro.Infrastructure.Persistence;
 using FitTrackPro.Infrastructure.Services.Authentication;
 using FitTrackPro.Infrastructure.Services.Caching;
 using FitTrackPro.Infrastructure.Services.Email;
+using FitTrackPro.Infrastructure.Services.FileStorage;
 
 public static class DependencyInjection
 {
@@ -40,6 +41,18 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IEmailService, EmailService>();
+        
+        // File Storage - Choose based on configuration
+        var storageProvider = configuration["FileStorage:Provider"] ?? "Local";
+        
+        if (storageProvider == "Azure")
+        {
+            services.AddScoped<IFileStorageService, AzureBlobStorageService>();
+        }
+        else
+        {
+            services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        }
 
         return services;
     }

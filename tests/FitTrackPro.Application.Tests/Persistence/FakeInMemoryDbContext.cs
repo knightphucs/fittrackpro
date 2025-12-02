@@ -16,6 +16,7 @@ public class FakeInMemoryDbContext : DbContext, IApplicationDbContext
     public DbSet<MealLog> MealLogs => Set<MealLog>();
     public DbSet<ProgressEntry> ProgressEntries => Set<ProgressEntry>();
     public DbSet<Food> Foods => Set<Food>();
+    public DbSet<ProgressPhoto> ProgressPhotos => Set<ProgressPhoto>();
 
     // Override to satisfy interface
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

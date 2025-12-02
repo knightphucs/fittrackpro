@@ -8,6 +8,7 @@ namespace FitTrackPro.API.IntegrationTests.Authentication;
 
 public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+    [Obsolete]
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,

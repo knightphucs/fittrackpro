@@ -10,6 +10,8 @@ using FitTrackPro.API.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using FitTrackPro.Infrastructure.Persistence.Seed;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -121,8 +123,25 @@ if (!builder.Environment.IsEnvironment("Testing"))
     builder.Services.AddInfrastructure(builder.Configuration);
 }
 
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10MB
+});
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10MB
+});
+
 
 var app = builder.Build();
+
+// Program.cs - After var app = builder.Build();
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
 
 // Configure middleware pipeline
 if (app.Environment.IsDevelopment())
@@ -140,6 +159,24 @@ app.UseSerilogRequestLogging();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseHttpsRedirection();
+
+// Serve static files for uploaded images (ONLY for Local storage)
+var storageProvider = builder.Configuration["FileStorage:Provider"] ?? "Local";
+if (storageProvider == "Local")
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(
+            Path.Combine(Directory.GetCurrentDirectory(), "uploads")),
+        RequestPath = "/uploads",
+        OnPrepareResponse = ctx =>
+        {
+            // Cache images for 30 days
+            ctx.Context.Response.Headers.Append(
+                "Cache-Control", "public,max-age=2592000");
+        }
+    });
+}
 
 app.UseCors("AllowAll");
 

@@ -7,6 +7,18 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.userprefs
+
+# Visual Studio cache/options directory
+.vs/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Rider
+.idea/
+*.sln.iml
 
 # Build results
 [Dd]ebug/
@@ -21,45 +33,20 @@ x86/
 bld/
 [Bb]in/
 [Oo]bj/
+build/
+
+# Logging
 [Ll]og/
 [Ll]ogs/
+logs/
+*.log
 
-# Visual Studio cache/options directory
-.vs/
-
-# Visual Studio Code
-.vscode/
-*.code-workspace
-
-# Rider
-.idea/
-*.sln.iml
-
-# User-specific files (MonoDevelop/Xamarin Studio)
-*.userprefs
-
-# Build results
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-x64/
-x86/
-build/
-bld/
-[Bb]in/
-[Oo]bj/
-
-# MSTest test Results
+# MSTest / NUnit / Coverage
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
-
-# NUnit
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
-
-# Coverage results
 coverage/
 coverage-report/
 coverage.json
@@ -87,15 +74,11 @@ yarn-error.log*
 # Docker
 docker-compose.override.yml
 
-# Logs
-logs/
-*.log
-
-# OS
+# OS Generated
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE / Editors
 *.swp
 *.swo
 *~
@@ -104,14 +87,16 @@ Thumbs.db
 *.bak
 *.tmp
 
-# Package files
+# Publish profiles & Packages
 *.nupkg
 *.snupkg
-
-# Publish profiles
 *.pubxml
 *.PublishSettings
 
-# Database connection strings
+# Secrets / Configs
 appsettings.Development.json
 appsettings.Production.json
+
+# Uploaded files
+uploads/
+!uploads/.gitkeep
