@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # PostgreSQL Database
   postgres:
@@ -54,7 +52,7 @@ services:
 
   # Elasticsearch
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     container_name: fittrackpro-elasticsearch
     environment:
       - discovery.type=single-node
@@ -87,6 +85,16 @@ services:
     depends_on:
       - postgres # Chỉ đợi postgres khởi động, không cần đợi healthy
 
+  # MailHog (Máy chủ SMTP giả lập)
+  mailhog:
+    image: mailhog/mailhog
+    container_name: fittrackpro-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - fittrackpro-network
+
   # API Application (Ứng dụng của bạn)
   api:
     build:
@@ -98,14 +106,29 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
+
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=FitTrackProDb;Username=fittrack_user;Password=${POSTGRES_PASSWORD_ENV}
       - ConnectionStrings__Redis=redis:6379
       - ConnectionStrings__Elasticsearch=http://elasticsearch:9200
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
+
       - Jwt__Secret=${JWT_SECRET_ENV}
       - Jwt__Issuer=FitTrackPro
       - Jwt__Audience=FitTrackProUsers
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
+
+      - FileStorage__Provider=${FILE_STORAGE_PROVIDER_ENV}
       - FileStorage__LocalPath=/app/uploads
+
+      - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME_ENV}
+      - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY_ENV}
+      - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET_ENV}
+
+      - EmailSettings__SmtpServer=${EMAIL_SMTP_SERVER}
+      - EmailSettings__Port=${EMAIL_PORT}
+      - EmailSettings__SenderName=${EMAIL_SENDER_NAME}
+      - EmailSettings__SenderEmail=${EMAIL_SENDER_EMAIL}
+      - EmailSettings__Username=${EMAIL_USERNAME}
+      - EmailSettings__Password=${EMAIL_PASSWORD}
     ports:
       - "5000:80"
     depends_on:
