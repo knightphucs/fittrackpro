@@ -11,6 +11,9 @@ using FitTrackPro.Application.Features.Users.DTOs;
 using FitTrackPro.Infrastructure.Persistence;
 using FitTrackPro.Domain.Entities;
 using FitTrackPro.Domain.ValueObjects;
+using Microsoft.AspNetCore.Identity;
+using FitTrackPro.Domain.Constants;
+using Microsoft.EntityFrameworkCore;
 
 public class IntegrationTestBase : IClassFixture<CustomWebApplicationFactory>
 {
@@ -32,6 +35,17 @@ public class IntegrationTestBase : IClassFixture<CustomWebApplicationFactory>
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         context.Database.EnsureDeleted();
         context.Database.EnsureCreated();
+
+        // Ensure required roles exist for tests
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+        if (!roleManager.RoleExistsAsync(Roles.User).GetAwaiter().GetResult())
+        {
+            roleManager.CreateAsync(new IdentityRole<Guid>(Roles.User)).GetAwaiter().GetResult();
+        }
+        if (!roleManager.RoleExistsAsync(Roles.Administrator).GetAwaiter().GetResult())
+        {
+            roleManager.CreateAsync(new IdentityRole<Guid>(Roles.Administrator)).GetAwaiter().GetResult();
+        }
     }
 
     protected async Task<AuthResponseDto> RegisterAndLoginUserAsync(
@@ -88,5 +102,14 @@ public class IntegrationTestBase : IClassFixture<CustomWebApplicationFactory>
         await context.SaveChangesAsync();
 
         return food;
+    }
+
+    protected async Task ConfirmUserEmailAsync(string email)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var user = await context.Users.SingleAsync(u => u.Email == email);
+        user.EmailConfirmed = true;
+        await context.SaveChangesAsync();
     }
 }

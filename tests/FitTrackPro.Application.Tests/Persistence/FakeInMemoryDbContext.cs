@@ -18,6 +18,18 @@ public class FakeInMemoryDbContext : DbContext, IApplicationDbContext
     public DbSet<Food> Foods => Set<Food>();
     public DbSet<ProgressPhoto> ProgressPhotos => Set<ProgressPhoto>();
 
+    public DbSet<RefreshToken> RefreshTokens => throw new NotImplementedException();
+
+    public DbSet<Exercise> Exercises => throw new NotImplementedException();
+
+    public DbSet<WorkoutSession> WorkoutSessions => throw new NotImplementedException();
+
+    public DbSet<WorkoutExercise> WorkoutExercises => throw new NotImplementedException();
+
+    public DbSet<ExerciseSet> ExerciseSets => throw new NotImplementedException();
+
+    public DbSet<PersonalRecord> PersonalRecords => throw new NotImplementedException();
+
     // Override to satisfy interface
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => base.SaveChangesAsync(cancellationToken);

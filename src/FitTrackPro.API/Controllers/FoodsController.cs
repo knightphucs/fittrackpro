@@ -6,8 +6,15 @@ using Microsoft.AspNetCore.Mvc;
 using FitTrackPro.Application.Features.Foods.Queries.SearchFoods;
 using FitTrackPro.Application.Features.Foods.Queries.GetFoodById;
 using FitTrackPro.Application.Features.Foods.Queries.GetCategories;
-using FitTrackPro.Application.Features.MealLogs.Queries.GetRecentFoods;
 using System.Security.Claims;
+using FitTrackPro.Application.Common.Models;
+using FitTrackPro.Application.Features.Foods.DTOs;
+using FitTrackPro.Application.Features.Foods.Commands.CreateFood;
+using FitTrackPro.Application.Features.Foods.Commands.UpdateFood;
+using FitTrackPro.Application.Features.Foods.Commands.DeleteFood;
+using FitTrackPro.Application.Features.Foods.Commands.RecognizeFood;
+using FitTrackPro.Application.Features.Foods.Commands.TrainFoodModel;
+using FitTrackPro.Domain.Constants;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -30,23 +37,8 @@ public class FoodsController : ControllerBase
     /// <param name="pageSize">Page size (default: 20, max: 100)</param>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> SearchFoods(
-        [FromQuery] string? searchTerm,
-        [FromQuery] string? category,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> SearchFoods([FromQuery] AdvancedSearchFoodsQuery query)
     {
-        if (pageSize > 100) pageSize = 100;
-        if (pageNumber < 1) pageNumber = 1;
-
-        var query = new SearchFoodsQuery
-        {
-            SearchTerm = searchTerm,
-            Category = category,
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
-
         var result = await _mediator.Send(query);
 
         if (!result.IsSuccess)
@@ -89,15 +81,14 @@ public class FoodsController : ControllerBase
     }
 
     /// <summary>
-    /// Get recently logged foods
+    /// Create a new food item
     /// </summary>
-    [HttpGet("recent")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetRecentFoods([FromQuery] int count = 10)
+    [HttpPost]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(Result<FoodDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Create([FromForm] CreateFoodCommand command)
     {
-        var userId = GetCurrentUserId();
-        var query = new GetRecentFoodsQuery(userId, count);
-        var result = await _mediator.Send(query);
+        var result = await _mediator.Send(command);
 
         if (!result.IsSuccess)
             return BadRequest(new { error = result.Error });
@@ -105,9 +96,114 @@ public class FoodsController : ControllerBase
         return Ok(result.Value);
     }
 
+    /// <summary>
+    /// Update an existing food item
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(Result<FoodDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromForm] UpdateFoodCommand command)
+    {
+        if (id != command.FoodId)
+        {
+            return BadRequest(new { error = "Route id does not match payload." });
+        }
+
+        var result = await _mediator.Send(command);
+
+        if (!result.IsSuccess)
+        {
+            var isNotFound = result.Error?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true;
+            return isNotFound
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
+        }
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Delete a food item
+    /// </summary>
+    /// <param name="id">Food ID</param>
+    /// <returns></returns>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(typeof(Result<Unit>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var command = new DeleteFoodCommand(id);
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+        {
+            var isNotFound = result.Error?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true;
+            return isNotFound
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
+        }
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Helper method to get current user's ID from claims
+    /// </summary>
     private Guid GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return Guid.Parse(userIdClaim!);
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            throw new UnauthorizedAccessException("Invalid user identity.");
+        }
+        return userId;
+    }
+
+    /// <summary>
+    /// Nhận diện món ăn từ ảnh upload
+    /// POST /api/foods/recognize
+    /// </summary>
+    [HttpPost("recognize")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> RecognizeFood(
+        [FromForm] IFormFile image,
+        CancellationToken cancellationToken)
+    {
+        var command = new RecognizeFoodCommand(image);
+        var result  = await _mediator.Send(command, cancellationToken);
+ 
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Contains("chưa sẵn sàng"))
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = result.Error });
+ 
+            return BadRequest(new { error = result.Error });
+        }
+ 
+        return Ok(result.Value);
+    }
+ 
+    /// <summary>
+    /// [ADMIN] Trigger training model
+    /// POST /api/foods/train-model
+    /// </summary>
+    [HttpPost("train-model")]
+    [Authorize(Roles = Roles.Administrator)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> TrainModel(CancellationToken cancellationToken)
+    {
+        var command = new TrainFoodModelCommand();
+        var result  = await _mediator.Send(command, cancellationToken);
+ 
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+ 
+        return Ok(result.Value);
     }
 }

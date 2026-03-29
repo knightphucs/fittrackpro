@@ -1,6 +1,8 @@
+using MediatR;
+
 namespace FitTrackPro.Domain.Common;
 
-public interface IDomainEvent
+public interface IDomainEvent : INotification
 {
     DateTime OccurredOn { get; }
 }

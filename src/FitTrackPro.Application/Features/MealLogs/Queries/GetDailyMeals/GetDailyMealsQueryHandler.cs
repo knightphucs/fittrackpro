@@ -6,19 +6,23 @@ using FitTrackPro.Application.Common.Interfaces;
 using FitTrackPro.Application.Common.Models;
 using FitTrackPro.Application.Features.MealLogs.DTOs;
 using FitTrackPro.Domain.Enums;
+using FitTrackPro.Domain.Repositories;
 
 public class GetDailyMealsQueryHandler
     : IRequestHandler<GetDailyMealsQuery, Result<DailyMealsDto>>
 {
     private readonly IApplicationDbContext _context;
     private readonly ICacheService _cacheService;
+    private readonly IMealLogRepository _mealLogRepository;
 
     public GetDailyMealsQueryHandler(
         IApplicationDbContext context,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IMealLogRepository mealLogRepository)
     {
         _context = context;
         _cacheService = cacheService;
+        _mealLogRepository = mealLogRepository;
     }
 
     public async Task<Result<DailyMealsDto>> Handle(
@@ -40,55 +44,32 @@ public class GetDailyMealsQueryHandler
         var endOfDay = startOfDay.AddDays(1).AddTicks(-1);
 
         // Get meal logs for the day
-        var mealLogs = await _context.MealLogs
-            .Include(m => m.Food)
-            .Where(m => m.UserId == request.UserId &&
-                       m.LoggedAt >= startOfDay &&
-                       m.LoggedAt <= endOfDay)
-            .OrderBy(m => m.LoggedAt)
-            .ToListAsync(cancellationToken);
+        var mealLogs = await _mealLogRepository.GetByUserIdAndDateRangeAsync(request.UserId, startOfDay, endOfDay, cancellationToken);
 
-        // Group by meal type
-        var groupedMeals = mealLogs
-            .GroupBy(m => m.MealType)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Calculate totals
-        var totalCalories = 0;
-        var totalProtein = 0m;
-        var totalCarbs = 0m;
-        var totalFat = 0m;
-
-        var meals = new List<MealLogDto>();
-
-        foreach (var mealLog in mealLogs)
+        // Map to DTOs
+        var meals = mealLogs.Select(log => new MealLogDto
         {
-            var calories = mealLog.CalculateTotalCalories(mealLog.Food);
-            var macros = mealLog.CalculateTotalMacros(mealLog.Food);
+            Id = log.Id,
+            FoodId = log.FoodSnapshot.OriginalFoodId,
+            FoodName = log.FoodSnapshot.FoodName,
+            FoodNameVi = log.FoodSnapshot.FoodNameVi,
+            MealType = log.MealType.ToString(),
+            ServingSize = log.FoodSnapshot.ServingSize,
+            ServingUnit = log.FoodSnapshot.ServingUnit,
+            ServingMultiplier = log.FoodSnapshot.ServingMultiplier,
+            TotalCalories = log.FoodSnapshot.TotalCalories,
+            TotalProtein = (decimal)log.FoodSnapshot.TotalProtein,
+            TotalCarbs = (decimal)log.FoodSnapshot.TotalCarbs,
+            TotalFat = (decimal)log.FoodSnapshot.TotalFat,
+            LoggedAt = log.LoggedAt,
+            Notes = log.Notes
+        }).ToList();
 
-            totalCalories += calories;
-            totalProtein += macros.Protein;
-            totalCarbs += macros.Carbs;
-            totalFat += macros.Fat;
-
-            meals.Add(new MealLogDto
-            {
-                Id = mealLog.Id,
-                FoodId = mealLog.FoodId,
-                FoodName = mealLog.Food.Name,
-                FoodNameVi = mealLog.Food.NameVi,
-                MealType = mealLog.MealType.ToString(),
-                ServingSize = mealLog.ServingSize,
-                ServingUnit = mealLog.Food.ServingUnit,
-                ServingMultiplier = mealLog.ServingMultiplier,
-                TotalCalories = calories,
-                TotalProtein = macros.Protein,
-                TotalCarbs = macros.Carbs,
-                TotalFat = macros.Fat,
-                LoggedAt = mealLog.LoggedAt,
-                Notes = mealLog.Notes
-            });
-        }
+        // Calculate daily summary
+        var totalCalories = meals.Sum(m => m.TotalCalories);
+        var totalProtein = meals.Sum(m => m.TotalProtein);
+        var totalCarbs = meals.Sum(m => m.TotalCarbs);
+        var totalFat = meals.Sum(m => m.TotalFat);
 
         // Get user's goal
         var goal = await _context.UserGoals

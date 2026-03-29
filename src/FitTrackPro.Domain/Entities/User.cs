@@ -1,22 +1,24 @@
 namespace FitTrackPro.Domain.Entities;
 
+using System.Security.Cryptography;
 using FitTrackPro.Domain.Common;
 using FitTrackPro.Domain.Enums;
 using FitTrackPro.Domain.Events;
+using Microsoft.AspNetCore.Identity;
 
-public class User : BaseEntity, IAuditableEntity
+public class User : IdentityUser<Guid>, IAuditableEntity, IHasDomainEvents
 {
-    public string Email { get; private set; } = default!;
-    public string PasswordHash { get; private set; } = default!;
+    private readonly List<IDomainEvent> _domainEvents = new();
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+    public void ClearDomainEvents() => _domainEvents.Clear();
+    private void AddDomainEvent(IDomainEvent domainEvent) =>_domainEvents.Add(domainEvent);
+
     public string FirstName { get; private set; } = default!;
     public string LastName { get; private set; } = default!;
     public DateOnly? DateOfBirth { get; private set; }
     public Gender? Gender { get; private set; }
     public decimal? Height { get; private set; } // cm
     public string? ProfilePhotoUrl { get; private set; }
-    public string? RefreshToken { get; private set; }
-    public DateTime? RefreshTokenExpiryTime { get; private set; }
-    public bool IsEmailConfirmed { get; private set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public string? CreatedBy { get; set; }
@@ -24,26 +26,26 @@ public class User : BaseEntity, IAuditableEntity
 
     // Navigation properties
     public UserGoal? CurrentGoal { get; private set; }
-    public ICollection<MealLog> MealLogs { get; private set; } = new List<MealLog>();
     public ICollection<ProgressEntry> ProgressEntries { get; private set; } = new List<ProgressEntry>();
+    public ICollection<RefreshToken> RefreshTokens { get; private set; } = new List<RefreshToken>();
 
     private User() { } // EF Core
 
     public static User Create(
         string email,
-        string passwordHash,
         string firstName,
         string lastName)
     {
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = email.ToLowerInvariant(),
-            PasswordHash = passwordHash,
+            UserName = email,
+            Email = email,
             FirstName = firstName,
             LastName = lastName,
-            IsEmailConfirmed = false,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = email,
+            SecurityStamp = Guid.NewGuid().ToString()
         };
 
         user.AddDomainEvent(new UserRegisteredEvent(user.Id, user.Email));
@@ -64,18 +66,7 @@ public class User : BaseEntity, IAuditableEntity
         Gender = gender;
         Height = height;
         UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void UpdateRefreshToken(string refreshToken, DateTime expiryTime)
-    {
-        RefreshToken = refreshToken;
-        RefreshTokenExpiryTime = expiryTime;
-    }
-
-    public void ConfirmEmail()
-    {
-        IsEmailConfirmed = true;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedBy = Id.ToString();
     }
 
     public string GetFullName() => $"{FirstName} {LastName}";

@@ -2,6 +2,7 @@ using FitTrackPro.Application.Common.Interfaces;
 using FitTrackPro.Application.Common.Models;
 using FitTrackPro.Application.Features.MealLogs.DTOs;
 using FitTrackPro.Domain.Entities;
+using FitTrackPro.Domain.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,12 +11,14 @@ namespace FitTrackPro.Application.Features.MealLogs.Commands.LogMeal;
 public class LogMealCommandHandler : IRequestHandler<LogMealCommand, Result<MealLogDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IMealLogRepository _mealLogRepository;
     private readonly ICacheService _cacheService;
 
-    public LogMealCommandHandler(IApplicationDbContext context, ICacheService cacheService)
+    public LogMealCommandHandler(IApplicationDbContext context, ICacheService cacheService, IMealLogRepository mealLogRepository)
     {
         _context = context;
         _cacheService = cacheService;
+        _mealLogRepository = mealLogRepository;
     }
 
     public async Task<Result<MealLogDto>> Handle(LogMealCommand request, CancellationToken cancellationToken)
@@ -24,47 +27,40 @@ public class LogMealCommandHandler : IRequestHandler<LogMealCommand, Result<Meal
         var food = await _context.Foods.FirstOrDefaultAsync(f => f.Id == request.FoodId, cancellationToken);
 
         if (food == null)
-        {
             return Result<MealLogDto>.Failure("Food item not found.");
-        }
 
         // Create and save meal log
         var loggedAt = (request.LoggedAt ?? DateTime.UtcNow).ToUniversalTime();
         var mealLog = MealLog.Create(
             request.UserId,
-            request.FoodId,
+            food,
             request.MealType,
             food.ServingSize,
             request.ServingMultiplier,
             loggedAt,
             request.Notes);
 
-        _context.MealLogs.Add(mealLog);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _mealLogRepository.AddAsync(mealLog, cancellationToken);
 
         // Invalidate daily summary cache
         var dateKey = loggedAt.Date.ToString("yyyy-MM-dd");
         var cacheKey = $"meals:daily{request.UserId}:{dateKey}";
         await _cacheService.RemoveAsync(cacheKey, cancellationToken);
 
-        // Calculate nutrition
-        var totalCalories = mealLog.CalculateTotalCalories(food);
-        var totalMacros = mealLog.CalculateTotalMacros(food);
-
         var dto = new MealLogDto
         {
             Id = mealLog.Id,
-            FoodId = mealLog.FoodId,
-            FoodName = food.Name,
-            FoodNameVi = food.NameVi,
+            FoodId = mealLog.FoodSnapshot.OriginalFoodId,
+            FoodName = mealLog.FoodSnapshot.FoodName,
+            FoodNameVi = mealLog.FoodSnapshot.FoodNameVi,
             MealType = mealLog.MealType.ToString(),
-            ServingSize = mealLog.ServingSize,
-            ServingUnit = food.ServingUnit,
-            ServingMultiplier = mealLog.ServingMultiplier,
-            TotalCalories = totalCalories,
-            TotalProtein = totalMacros.Protein,
-            TotalCarbs = totalMacros.Carbs,
-            TotalFat = totalMacros.Fat,
+            ServingSize = mealLog.FoodSnapshot.ServingSize,
+            ServingUnit = mealLog.FoodSnapshot.ServingUnit,
+            ServingMultiplier = mealLog.FoodSnapshot.ServingMultiplier,
+            TotalCalories = mealLog.FoodSnapshot.TotalCalories,
+            TotalProtein = (decimal)mealLog.FoodSnapshot.TotalProtein,
+            TotalCarbs = (decimal)mealLog.FoodSnapshot.TotalCarbs,
+            TotalFat = (decimal)mealLog.FoodSnapshot.TotalFat,
             LoggedAt = mealLog.LoggedAt,
             Notes = mealLog.Notes
         };

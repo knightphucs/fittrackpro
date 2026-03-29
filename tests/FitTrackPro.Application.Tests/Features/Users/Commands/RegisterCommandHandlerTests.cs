@@ -14,44 +14,69 @@ using FitTrackPro.Application.Features.Users.Commands.Register;
 using FitTrackPro.Application.Tests.Common;
 using FitTrackPro.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.AspNetCore.Identity;
 
 public class RegisterCommandHandlerTests : TestBase
 {
     private readonly RegisterCommandHandler _handler;
+    private readonly Mock<UserManager<User>> _userManagerMock;
 
     public RegisterCommandHandlerTests()
     {
         SetupDefaultMocks();
 
-        // Provide a mock DbSet<User> so Context.Users is not null and supports queries/adds.
-        var usersList = new List<User>();
-        var usersQueryable = usersList.AsQueryable();
+        // Mock UserManager<User>
+        var userStoreMock = new Mock<IUserStore<User>>();
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
+        _userManagerMock = new Mock<UserManager<User>>(
+            userStoreMock.Object, null, null, null, null, null, null, null, null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
-        var usersDbSet = new Mock<DbSet<User>>();
+        // Setup UserManager behaviors
+        _userManagerMock.Setup(x => x.FindByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync((User?)null); // No existing user
 
-        // Support synchronous LINQ operations
-        usersDbSet.As<IQueryable<User>>().Setup(m => m.Provider).Returns(new TestAsyncQueryProvider<User>(usersQueryable.Provider));
-        usersDbSet.As<IQueryable<User>>().Setup(m => m.Expression).Returns(usersQueryable.Expression);
-        usersDbSet.As<IQueryable<User>>().Setup(m => m.ElementType).Returns(usersQueryable.ElementType);
-        usersDbSet.As<IQueryable<User>>().Setup(m => m.GetEnumerator()).Returns(() => usersQueryable.GetEnumerator());
+        _userManagerMock.Setup(x => x.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
 
-        // Support async enumeration (used by EF Core async query extensions)
-        usersDbSet.As<IAsyncEnumerable<User>>().Setup(m => m.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
-            .Returns(new TestAsyncEnumerator<User>(usersQueryable.GetEnumerator()));
+        _userManagerMock.Setup(x => x.AddToRoleAsync(It.IsAny<User>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
 
-        // Capture Adds into the backing list
-        usersDbSet.Setup(d => d.Add(It.IsAny<User>())).Callback<User>(u => usersList.Add(u));
+        _userManagerMock.Setup(x => x.GetRolesAsync(It.IsAny<User>()))
+            .ReturnsAsync(new List<string> { "User" });
 
-        ContextMock.SetupGet(c => c.Users).Returns(usersDbSet.Object);
+        // Provide a mock DbSet<RefreshToken>
+        var refreshTokensList = new List<RefreshToken>();
+        var refreshTokensQueryable = refreshTokensList.AsQueryable();
 
-        // Ensure SaveChangesAsync is handled by the mock to avoid NotImplementedException
+        var refreshTokensDbSet = new Mock<DbSet<RefreshToken>>();
+        refreshTokensDbSet.As<IQueryable<RefreshToken>>().Setup(m => m.Provider).Returns(new TestAsyncQueryProvider<RefreshToken>(refreshTokensQueryable.Provider));
+        refreshTokensDbSet.As<IQueryable<RefreshToken>>().Setup(m => m.Expression).Returns(refreshTokensQueryable.Expression);
+        refreshTokensDbSet.As<IQueryable<RefreshToken>>().Setup(m => m.ElementType).Returns(refreshTokensQueryable.ElementType);
+        refreshTokensDbSet.As<IQueryable<RefreshToken>>().Setup(m => m.GetEnumerator()).Returns(() => refreshTokensQueryable.GetEnumerator());
+        refreshTokensDbSet.As<IAsyncEnumerable<RefreshToken>>().Setup(m => m.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
+            .Returns(new TestAsyncEnumerator<RefreshToken>(refreshTokensQueryable.GetEnumerator()));
+        refreshTokensDbSet.Setup(d => d.Add(It.IsAny<RefreshToken>())).Callback<RefreshToken>(t => refreshTokensList.Add(t));
+
+        ContextMock.SetupGet(c => c.RefreshTokens).Returns(refreshTokensDbSet.Object);
         ContextMock.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         _handler = new RegisterCommandHandler(
+            _userManagerMock.Object,
             ContextMock.Object,
-            PasswordHasherMock.Object,
-            JwtTokenGeneratorMock.Object,
-            EmailServiceMock.Object);
+            JwtTokenGeneratorMock.Object);
+    }
+
+    protected new void SetupDefaultMocks()
+    {
+        base.SetupDefaultMocks();
+        
+        // Update GenerateAccessToken to accept roles parameter
+        JwtTokenGeneratorMock.Setup(x => x.GenerateAccessToken(It.IsAny<User>(), It.IsAny<IEnumerable<string>>()))
+            .Returns("access_token");
+
+        JwtTokenGeneratorMock.Setup(x => x.GenerateRefreshToken())
+            .Returns("refresh_token");
     }
 
     [Fact]
@@ -77,9 +102,9 @@ public class RegisterCommandHandlerTests : TestBase
         result.Value.AccessToken.Should().Be("access_token");
         result.Value.RefreshToken.Should().Be("refresh_token");
 
-        ContextMock.Verify(x => x.Users.Add(It.IsAny<User>()), Times.Once);
-        ContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
-        PasswordHasherMock.Verify(x => x.HashPassword("Password123!"), Times.Once);
+        _userManagerMock.Verify(x => x.CreateAsync(It.IsAny<User>(), "Password123!"), Times.Once);
+        _userManagerMock.Verify(x => x.AddToRoleAsync(It.IsAny<User>(), "User"), Times.Once);
+        ContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -98,7 +123,7 @@ public class RegisterCommandHandlerTests : TestBase
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        PasswordHasherMock.Verify(x => x.HashPassword("Password123!"), Times.Once);
+        _userManagerMock.Verify(x => x.CreateAsync(It.IsAny<User>(), "Password123!"), Times.Once);
     }
 
     [Fact]
@@ -117,14 +142,18 @@ public class RegisterCommandHandlerTests : TestBase
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        JwtTokenGeneratorMock.Verify(x => x.GenerateAccessToken(It.IsAny<User>()), Times.Once);
+        JwtTokenGeneratorMock.Verify(x => x.GenerateAccessToken(It.IsAny<User>(), It.IsAny<IEnumerable<string>>()), Times.Once);
         JwtTokenGeneratorMock.Verify(x => x.GenerateRefreshToken(), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_ShouldSendWelcomeEmail()
+    public async Task Handle_WithExistingEmail_ShouldReturnFailure()
     {
         // Arrange
+        var existingUser = User.Create("test@example.com", "Existing", "User");
+        _userManagerMock.Setup(x => x.FindByEmailAsync("test@example.com"))
+            .ReturnsAsync(existingUser);
+
         var command = new RegisterCommand
         {
             Email = "test@example.com",
@@ -134,15 +163,12 @@ public class RegisterCommandHandlerTests : TestBase
         };
 
         // Act
-        await _handler.Handle(command, CancellationToken.None);
-
-        // Wait a bit for fire-and-forget task
-        await Task.Delay(100);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        EmailServiceMock.Verify(
-            x => x.SendWelcomeEmailAsync("test@example.com", "John"),
-            Times.Once);
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Be("User with this email already exists");
+        _userManagerMock.Verify(x => x.CreateAsync(It.IsAny<User>(), It.IsAny<string>()), Times.Never);
     }
 }
 

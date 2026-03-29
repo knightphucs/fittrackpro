@@ -1,6 +1,6 @@
 namespace FitTrackPro.Domain.Common;
 
-public abstract class BaseEntity
+public abstract class BaseEntity : IHasDomainEvents
 {
     private readonly List<IDomainEvent> _domainEvents = new();
 

@@ -28,7 +28,7 @@ public class TestBase
         PasswordHasherMock.Setup(x => x.HashPassword(It.IsAny<string>()))
             .Returns("hashed_password");
 
-        JwtTokenGeneratorMock.Setup(x => x.GenerateAccessToken(It.IsAny<User>()))
+        JwtTokenGeneratorMock.Setup(x => x.GenerateAccessToken(It.IsAny<User>(), It.IsAny<IEnumerable<string>>()))
             .Returns("access_token");
 
         JwtTokenGeneratorMock.Setup(x => x.GenerateRefreshToken())

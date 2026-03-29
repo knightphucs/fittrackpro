@@ -1,6 +1,9 @@
 namespace FitTrackPro.Infrastructure.Persistence.Seed;
 
+using FitTrackPro.Application.Common.Interfaces;
+using FitTrackPro.Domain.Entities;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -14,10 +17,21 @@ public static class SeedDataExtensions
         try
         {
             var context = services.GetRequiredService<ApplicationDbContext>();
-            var logger = services.GetRequiredService<ILogger<DatabaseSeeder>>();
+            var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+            var userManager = services.GetRequiredService<UserManager<User>>();
+            var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-            var seeder = new DatabaseSeeder(context, logger);
-            await seeder.SeedAsync();
+            var databaseSeederLogger = loggerFactory.CreateLogger<DatabaseSeeder>();
+            var databaseSeeder = new DatabaseSeeder(context, databaseSeederLogger, userManager, roleManager);
+            await databaseSeeder.SeedAsync();
+
+            var foodLogger = loggerFactory.CreateLogger<FoodSeeder>();
+            var foodSeeder = new FoodSeeder(context, foodLogger);
+            await foodSeeder.SeedAsync();
+
+            var exerciseLogger = loggerFactory.CreateLogger<ExerciseSeeder>();
+            var exerciseSeeder = new ExerciseSeeder(context, exerciseLogger);
+            await exerciseSeeder.SeedAsync();
         }
         catch (Exception ex)
         {

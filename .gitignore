@@ -100,3 +100,13 @@ appsettings.Production.json
 # Uploaded files
 uploads/
 !uploads/.gitkeep
+
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Postman
+.postman/
+postman/
+postman_collection.json

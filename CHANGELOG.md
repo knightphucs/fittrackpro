@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Meal logging feature
-- Workout tracking
-- Progress analytics
+- ML.NET AI-Integration
+- Social Feature
+- Dashboard (Quick Preview)
+- Get month or week report
+- Import & export data to CSV or PDF (Food, Progress, Mealogs, Nutrition-report, full)
 
 ## [0.1.0] - 2025-11-11
 
@@ -43,3 +45,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - Project structure
 - Basic documentation
+
+## [0.0.2] - 2025-12-17
+
+### Added
+
+- Meal logging feature
+- Workout tracking
+- Progress analytics
+- Exercise database (+20 exercises)
+- Users info security (Apply ASP.NET Core Identity)
+- Email Service for now (Brevo)
+- Saved refresh token
+- Storage, Cloudinary

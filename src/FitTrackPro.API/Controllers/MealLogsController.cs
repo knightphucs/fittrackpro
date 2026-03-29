@@ -7,6 +7,7 @@ using System.Security.Claims;
 using FitTrackPro.Application.Features.MealLogs.Commands.LogMeal;
 using FitTrackPro.Application.Features.MealLogs.Commands.DeleteMealLog;
 using FitTrackPro.Application.Features.MealLogs.Queries.GetDailyMeals;
+using FitTrackPro.Application.Features.MealLogs.Queries.GetRecentFoods;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -82,5 +83,22 @@ public class MealLogsController : ControllerBase
             return NotFound(new { error = result.Error });
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Get recently logged foods
+    /// </summary>
+    [HttpGet("recent")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRecentFoods([FromQuery] int count = 10)
+    {
+        var userId = GetCurrentUserId();
+        var query = new GetRecentFoodsQuery(userId, count);
+        var result = await _mediator.Send(query);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+
+        return Ok(result.Value);
     }
 }

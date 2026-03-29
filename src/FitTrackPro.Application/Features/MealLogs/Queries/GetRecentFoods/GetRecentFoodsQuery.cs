@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using FitTrackPro.Application.Common.Interfaces;
 using FitTrackPro.Application.Common.Models;
 using FitTrackPro.Application.Features.Foods.DTOs;
+using FitTrackPro.Domain.Repositories;
 
 public record GetRecentFoodsQuery(Guid UserId, int Count = 10) 
     : IRequest<Result<List<FoodDto>>>;
@@ -13,22 +14,34 @@ public class GetRecentFoodsQueryHandler
     : IRequestHandler<GetRecentFoodsQuery, Result<List<FoodDto>>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IMealLogRepository _mealLogRepository;
 
-    public GetRecentFoodsQueryHandler(IApplicationDbContext context)
+    public GetRecentFoodsQueryHandler(IApplicationDbContext context, IMealLogRepository mealLogRepository)
     {
         _context = context;
+        _mealLogRepository = mealLogRepository;
     }
 
     public async Task<Result<List<FoodDto>>> Handle(
         GetRecentFoodsQuery request,
         CancellationToken cancellationToken)
     {
-        var recentFoods = await _context.MealLogs
-            .Where(m => m.UserId == request.UserId)
-            .OrderByDescending(m => m.LoggedAt)
-            .Select(m => m.Food)
-            .Distinct()
-            .Take(request.Count)
+        // Get recent food IDs from meal logs
+        var recentFoodIds = await _mealLogRepository.GetRecentFoodIdsAsync(request.UserId, request.Count, cancellationToken);
+
+        if (!recentFoodIds.Any())
+        {
+            return Result<List<FoodDto>>.Success(new List<FoodDto>());
+        }
+
+        // Get food details
+        var foods = await _context.Foods
+            .Where(f => recentFoodIds.Contains(f.Id))
+            .ToListAsync(cancellationToken);
+        
+        // Map to DTOs and maintain order
+        var orderedFoods = recentFoodIds
+            .Select(id => foods.First(f => f.Id == id))
             .Select(f => new FoodDto
             {
                 Id = f.Id,
@@ -42,8 +55,8 @@ public class GetRecentFoodsQueryHandler
                 Carbs = f.Macros.Carbs,
                 Fat = f.Macros.Fat
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
-        return Result<List<FoodDto>>.Success(recentFoods);
+        return Result<List<FoodDto>>.Success(orderedFoods);
     }
 }

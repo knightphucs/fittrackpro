@@ -30,6 +30,12 @@ public class AuthControllerTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/auth/register", command);
 
         // Assert
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Response status: {response.StatusCode}, Content: {errorContent}");
+        }
+
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
@@ -116,7 +122,14 @@ public class AuthControllerTests : IntegrationTestBase
             LastName = "Doe"
         };
 
-        await Client.PostAsJsonAsync("/api/auth/register", registerCommand);
+        var registerResponse = await Client.PostAsJsonAsync("/api/auth/register", registerCommand);
+        if (!registerResponse.IsSuccessStatusCode)
+        {
+            var errorContent = await registerResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Registration failed: {registerResponse.StatusCode}, Content: {errorContent}");
+        }
+
+        await ConfirmUserEmailAsync(email);
 
         var loginCommand = new LoginCommand
         {
@@ -170,7 +183,14 @@ public class AuthControllerTests : IntegrationTestBase
             LastName = "Doe"
         };
 
-        await Client.PostAsJsonAsync("/api/auth/register", registerCommand);
+        var registerResponse = await Client.PostAsJsonAsync("/api/auth/register", registerCommand);
+        if (!registerResponse.IsSuccessStatusCode)
+        {
+            var errorContent = await registerResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Registration failed: {registerResponse.StatusCode}, Content: {errorContent}");
+        }
+
+        await ConfirmUserEmailAsync(email);
 
         var loginCommand = new LoginCommand
         {

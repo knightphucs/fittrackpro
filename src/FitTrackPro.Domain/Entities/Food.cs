@@ -34,6 +34,7 @@ public class Food : BaseEntity, IAuditableEntity
         MacroNutrients macros,
         decimal? fiber = null,
         decimal? sugar = null,
+        string? imageUrl = null,
         bool isUserCreated = false,
         Guid? createdByUserId = null)
     {
@@ -56,6 +57,7 @@ public class Food : BaseEntity, IAuditableEntity
             Macros = macros,
             Fiber = fiber,
             Sugar = sugar,
+            ImageUrl = imageUrl,
             IsUserCreated = isUserCreated,
             CreatedByUserId = createdByUserId,
             CreatedAt = DateTime.UtcNow
@@ -65,15 +67,32 @@ public class Food : BaseEntity, IAuditableEntity
     public void Update(
         string name,
         string? nameVi,
+        string? category,
         decimal servingSize,
+        string servingUnit,
         int calories,
-        MacroNutrients macros)
+        MacroNutrients macros,
+        decimal? fiber,
+        decimal? sugar,
+        string? imageUrl)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Food name is required", nameof(name));
+        if (servingSize <= 0)
+            throw new ArgumentException("Serving size must be positive", nameof(servingSize));
+        if (calories < 0)
+            throw new ArgumentException("Calories cannot be negative", nameof(calories));
+
         Name = name;
         NameVi = nameVi;
+        Category = category;
         ServingSize = servingSize;
+        ServingUnit = servingUnit;
         Calories = calories;
         Macros = macros;
+        Fiber = fiber;
+        Sugar = sugar;
+        ImageUrl = imageUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 }

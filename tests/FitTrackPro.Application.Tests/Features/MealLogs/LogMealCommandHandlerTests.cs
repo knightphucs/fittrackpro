@@ -9,6 +9,7 @@ using FitTrackPro.Domain.Entities;
 using FitTrackPro.Domain.Enums;
 using FitTrackPro.Domain.ValueObjects;
 using FitTrackPro.Application.Common.Interfaces;
+using FitTrackPro.Domain.Repositories;
 
 public class LogMealCommandHandlerTests
 {
@@ -27,6 +28,7 @@ public class LogMealCommandHandlerTests
         // Arrange
         var context = CreateContext();
         var cache = new Mock<ICacheService>();
+        var repoMock = new Mock<IMealLogRepository>();
 
         var food = Food.Create(
             "Phở Bò",
@@ -41,7 +43,7 @@ public class LogMealCommandHandlerTests
         context.Foods.Add(food);
         await context.SaveChangesAsync();
 
-        var handler = new LogMealCommandHandler(context, cache.Object);
+        var handler = new LogMealCommandHandler(context, cache.Object, repoMock.Object);
 
         var command = new LogMealCommand
         {
@@ -67,8 +69,9 @@ public class LogMealCommandHandlerTests
         // Arrange
         var context = CreateContext();
         var cache = new Mock<ICacheService>();
+        var repoMock = new Mock<IMealLogRepository>();
 
-        var handler = new LogMealCommandHandler(context, cache.Object);
+        var handler = new LogMealCommandHandler(context, cache.Object, repoMock.Object);
 
         var command = new LogMealCommand
         {

@@ -4,38 +4,41 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using FitTrackPro.Application.Common.Interfaces;
 using FitTrackPro.Application.Common.Models;
+using FitTrackPro.Domain.Repositories;
 
 public class DeleteMealLogCommandHandler : IRequestHandler<DeleteMealLogCommand, Result<Unit>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IMealLogRepository _mealLogRepository;
     private readonly ICacheService _cacheService;
 
     public DeleteMealLogCommandHandler(
         IApplicationDbContext context,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IMealLogRepository mealLogRepository)
     {
         _context = context;
         _cacheService = cacheService;
+        _mealLogRepository = mealLogRepository;
     }
 
     public async Task<Result<Unit>> Handle(
         DeleteMealLogCommand request,
         CancellationToken cancellationToken)
     {
-        var mealLog = await _context.MealLogs
-            .FirstOrDefaultAsync(m => m.Id == request.MealLogId && m.UserId == request.UserId,
-                cancellationToken);
+        // Get meal log
+        var log = await _mealLogRepository.GetByIdAsync(request.MealLogId, cancellationToken);
 
-        if (mealLog == null)
+        if (log == null || log.UserId != request.UserId)
         {
-            return Result<Unit>.Failure("Meal log not found");
+            return Result<Unit>.Failure("Meal log not found.");
         }
 
-        _context.MealLogs.Remove(mealLog);
-        await _context.SaveChangesAsync(cancellationToken);
+        // Delete meal log
+        await _mealLogRepository.DeleteAsync(request.MealLogId, request.UserId, cancellationToken);
 
         // Invalidate cache
-        var dateKey = mealLog.LoggedAt.Date.ToString("yyyy-MM-dd");
+        var dateKey = log.LoggedAt.Date.ToString("yyyy-MM-dd");
         var cacheKey = $"meals:daily:{request.UserId}:{dateKey}";
         await _cacheService.RemoveAsync(cacheKey, cancellationToken);
 

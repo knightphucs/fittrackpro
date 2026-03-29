@@ -13,7 +13,6 @@ public class UserTests
         // Arrange & Act
         var user = User.Create(
             "test@example.com",
-            "hashedPassword",
             "John",
             "Doe");
 
@@ -22,7 +21,7 @@ public class UserTests
         user.Email.Should().Be("test@example.com");
         user.FirstName.Should().Be("John");
         user.LastName.Should().Be("Doe");
-        user.IsEmailConfirmed.Should().BeFalse();
+        user.EmailConfirmed.Should().BeFalse();
         user.DomainEvents.Should().HaveCount(1);
     }
 
@@ -32,7 +31,6 @@ public class UserTests
         // Arrange
         var user = User.Create(
             "test@example.com",
-            "hashedPassword",
             "John",
             "Doe");
 
@@ -56,7 +54,6 @@ public class UserTests
         // Arrange
         var user = User.Create(
             "test@example.com",
-            "hashedPassword",
             "John",
             "Doe");
 
@@ -80,7 +77,6 @@ public class UserTests
         // Arrange
         var user = User.Create(
             "test@example.com",
-            "hashedPassword",
             "John",
             "Doe");
 
@@ -97,7 +93,6 @@ public class UserTests
         // Arrange
         var user = User.Create(
             "test@example.com",
-            "hashedPassword",
             "John",
             "Doe");
 

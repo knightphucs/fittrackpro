@@ -1,79 +1,82 @@
 namespace FitTrackPro.Application.Features.Users.Commands.Register;
 
 using MediatR;
+using Microsoft.AspNetCore.Identity; // Cần thiết cho UserManager
+using Microsoft.EntityFrameworkCore;
 using FitTrackPro.Application.Common.Models;
 using FitTrackPro.Application.Features.Users.DTOs;
 using FitTrackPro.Application.Common.Interfaces;
 using FitTrackPro.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
+using FitTrackPro.Domain.Common;
 
 public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<AuthResponseDto>>
 {
+    private readonly UserManager<User> _userManager;
     private readonly IApplicationDbContext _context;
-    private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
-    private readonly IEmailService _emailService;
 
     public RegisterCommandHandler(
+        UserManager<User> userManager,
         IApplicationDbContext context,
-        IPasswordHasher passwordHasher,
-        IJwtTokenGenerator jwtTokenGenerator,
-        IEmailService emailService)
+        IJwtTokenGenerator jwtTokenGenerator)
     {
+        _userManager = userManager;
         _context = context;
-        _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;
-        _emailService = emailService;
     }
 
     public async Task<Result<AuthResponseDto>> Handle(
         RegisterCommand request,
         CancellationToken cancellationToken)
     {
-        // Check if user already exists
-        var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower(), cancellationToken);
-
+        var existingUser = await _userManager.FindByEmailAsync(request.Email);
         if (existingUser != null)
         {
             return Result<AuthResponseDto>.Failure("User with this email already exists");
         }
 
-        // Hash password
-        var passwordHash = _passwordHasher.HashPassword(request.Password);
-
-        // Create user
         var user = User.Create(
             request.Email,
-            passwordHash,
             request.FirstName,
             request.LastName);
 
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync(cancellationToken);
+        var createResult = await _userManager.CreateAsync(user, request.Password);
 
-        // Generate tokens
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-        var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+        if (!createResult.Succeeded)
+        {
+            var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+            return Result<AuthResponseDto>.Failure($"Registration failed: {errors}");
+        }
+
+        await _userManager.AddToRoleAsync(user, "User");
+        var roles = await _userManager.GetRolesAsync(user); 
+
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, roles);
+        var refreshTokenString = _jwtTokenGenerator.GenerateRefreshToken();
         var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
 
-        // Save refresh token
-        user.UpdateRefreshToken(refreshToken, refreshTokenExpiry);
+        var refreshTokenEntity = new RefreshToken
+        {
+            Token = refreshTokenString,
+            JwtId = Guid.NewGuid().ToString(),
+            CreationDate = DateTime.UtcNow,
+            ExpiryDate = refreshTokenExpiry,
+            Used = false,
+            Invalidated = false,
+            UserId = user.Id
+        };
+
+        _context.RefreshTokens.Add(refreshTokenEntity);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Send welcome email (fire and forget)
-        // _ = Task.Run(() => _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName), cancellationToken);
-        _ = _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName);
-
-        // Return response
         var response = new AuthResponseDto
         {
             UserId = user.Id,
-            Email = user.Email,
+            Email = user.Email!,
             FirstName = user.FirstName,
             LastName = user.LastName,
             AccessToken = accessToken,
-            RefreshToken = refreshToken,
+            RefreshToken = refreshTokenString,
             ExpiresAt = refreshTokenExpiry
         };
 

@@ -17,6 +17,7 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, R
     public async Task<Result<UserProfileDto>> Handle(GetUserProfileQuery request, CancellationToken cancellationToken)
     {
         var user = await _context.Users
+            .AsNoTracking()
             .Include(u => u.CurrentGoal)
             .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
@@ -26,7 +27,7 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, R
         var dto = new UserProfileDto
         {
             UserId = user.Id,
-            Email = user.Email,
+            Email = user.Email ?? string.Empty,
             FirstName = user.FirstName,
             LastName = user.LastName,
             FullName = user.GetFullName(),
@@ -35,7 +36,7 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, R
             Gender = user.Gender,
             Height = user.Height,
             ProfilePhotoUrl = user.ProfilePhotoUrl,
-            IsEmailConfirmed = user.IsEmailConfirmed,
+            IsEmailConfirmed = user.EmailConfirmed,
             HasActiveGoal = user.CurrentGoal?.IsActive ?? false
         };
 

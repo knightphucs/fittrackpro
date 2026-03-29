@@ -31,7 +31,6 @@ public class SetGoalCommandHandlerTests
         var userId = Guid.NewGuid();
         var user = User.Create(
             "test@example.com",
-            "hashedpassword",
             "John",
             "Doe"
         );

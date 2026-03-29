@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using FitTrackPro.Application.Common.Interfaces;
+using FitTrackPro.Application.Common.Models;
 using FitTrackPro.Domain.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -18,16 +19,21 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _jwtSettings = jwtSettings.Value;
     }
 
-    public string GenerateAccessToken(User user)
+    public string GenerateAccessToken(User user, IEnumerable<string> roles)
     {
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
             new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName),
             new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -75,13 +81,4 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
         return principal;
     }
-}
-
-public class JwtSettings
-{
-    public string Secret { get; set; } = default!;
-    public string Issuer { get; set; } = default!;
-    public string Audience { get; set; } = default!;
-    public int AccessTokenExpirationMinutes { get; set; } = 60;
-    public int RefreshTokenExpirationDays { get; set; } = 7;
 }
