@@ -100,6 +100,17 @@ appsettings.Production.json
 # Uploaded files
 uploads/
 !uploads/.gitkeep
+ml-models/
+!ml-models/.gitkeep
+
+# ML datasets/resources (keep out of git history)
+scripts/training-data/**
+!scripts/training-data/
+!scripts/training-data/.gitkeep
+!scripts/training-data/README.md
+scripts/mlnet-resources/**
+!scripts/mlnet-resources/
+!scripts/mlnet-resources/.gitkeep
 
 # Python virtual environment
 .venv/

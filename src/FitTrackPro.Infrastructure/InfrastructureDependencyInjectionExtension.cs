@@ -15,7 +15,9 @@ public static class InfrastructureDependencyInjectionExtension
         services.Configure<FoodRecognitionOptions>(
             configuration.GetSection(FoodRecognitionOptions.SectionName));
  
-        services.AddSingleton<IFoodRecognitionService, FoodRecognitionService>();
+        // FoodRecognitionService depends on ApplicationDbContext (scoped),
+        // so it cannot be registered as singleton.
+        services.AddScoped<IFoodRecognitionService, FoodRecognitionService>();
  
         services.AddScoped<IModelTrainer, ModelTrainer>();
  

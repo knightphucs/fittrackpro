@@ -12,8 +12,6 @@ public static class LoggingExtensions
             .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
             .ReadFrom.Configuration(configuration)
             .Enrich.FromLogContext()
-            .WriteTo.Console()
-            .WriteTo.Seq(configuration["Serilog:WriteTo:0:Args:serverUrl"] ?? "http://localhost:5341")
             .CreateLogger();
 
         return host.UseSerilog();

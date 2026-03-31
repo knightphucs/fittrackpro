@@ -6,6 +6,7 @@ using FitTrackPro.Application.Common.Utils;
 using FitTrackPro.Infrastructure.MachineLearning.Models;
 using FitTrackPro.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ML;
@@ -19,6 +20,7 @@ public class FoodRecognitionService : IFoodRecognitionService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<FoodRecognitionService> _logger;
     private readonly FoodRecognitionOptions _options;
+    private readonly IHostEnvironment _hostEnvironment;
  
     // Model được load 1 lần duy nhất (singleton) → thread-safe prediction engine
     private PredictionEngine<FoodImageInputData, FoodImagePrediction>? _predictionEngine;
@@ -29,12 +31,14 @@ public class FoodRecognitionService : IFoodRecognitionService
     public FoodRecognitionService(
         ApplicationDbContext context,
         ILogger<FoodRecognitionService> logger,
-        IOptions<FoodRecognitionOptions> options)
+        IOptions<FoodRecognitionOptions> options,
+        IHostEnvironment hostEnvironment)
     {
         _mlContext = new MLContext(seed: 42);
         _context = context;
         _logger = logger;
         _options = options.Value;
+        _hostEnvironment = hostEnvironment;
  
         TryLoadModel();
     }
@@ -109,12 +113,15 @@ public class FoodRecognitionService : IFoodRecognitionService
  
     private void TryLoadModel()
     {
-        var modelPath = _options.ModelPath;
+        var modelPath = ResolveModelPath(_options.ModelPath);
  
         if (!File.Exists(modelPath))
         {
-            _logger.LogWarning("[FoodRecognition] Model file không tồn tại tại: {Path}. " +
-                               "Chạy ModelTrainer để train model trước.", modelPath);
+            _logger.LogWarning(
+                "[FoodRecognition] Model file không tồn tại tại: {Path} (configured: {ConfiguredPath}). " +
+                "Chạy ModelTrainer để train model trước.",
+                modelPath,
+                _options.ModelPath);
             return;
         }
  
@@ -134,6 +141,14 @@ public class FoodRecognitionService : IFoodRecognitionService
         {
             _logger.LogError(ex, "[FoodRecognition] Không thể load model từ: {Path}", modelPath);
         }
+    }
+
+    private string ResolveModelPath(string configuredPath)
+    {
+        if (Path.IsPathRooted(configuredPath))
+            return Path.GetFullPath(configuredPath);
+
+        return Path.GetFullPath(Path.Combine(_hostEnvironment.ContentRootPath, configuredPath));
     }
  
     private static async Task<byte[]> PreprocessImageAsync(byte[] imageBytes)

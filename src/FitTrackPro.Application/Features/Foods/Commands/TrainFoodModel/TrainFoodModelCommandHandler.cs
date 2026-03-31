@@ -47,8 +47,7 @@ public class TrainFoodModelCommandHandler
         }
         catch (DirectoryNotFoundException ex)
         {
-            return Result<TrainFoodModelDto>.Failure(
-                $"Không tìm thấy thư mục training data: {ex.Message}");
+            return Result<TrainFoodModelDto>.Failure(ex.Message);
         }
         catch (InvalidOperationException ex)
         {

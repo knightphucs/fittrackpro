@@ -177,6 +177,11 @@ services:
     restart: always
     volumes:
       - ./uploads:/app/uploads
+      - ./ml-models:/app/MLModels
+      # Keep training dataset outside repo to avoid bloating git history.
+      # Override TRAINING_DATA_HOST_PATH in your shell/.env when needed.
+      - ${TRAINING_DATA_HOST_PATH:-../fittrackpro-data/training-data}:/app/scripts/training-data:ro
+      - ./scripts/mlnet-resources:/tmp/MLNET
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
@@ -190,7 +195,7 @@ services:
 
       - Elasticsearch__Uri=http://elasticsearch:9200
 
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
+      - Serilog__WriteTo__1__Args__serverUrl=http://seq:80
 
       - Jwt__Secret=${JWT_SECRET_ENV}
       - Jwt__Issuer=FitTrackPro
@@ -198,6 +203,9 @@ services:
 
       - FileStorage__Provider=${FILE_STORAGE_PROVIDER_ENV}
       - FileStorage__LocalPath=/app/uploads
+      - FoodRecognition__ModelPath=/app/MLModels/food_recognition_model.zip
+      - FoodRecognition__TrainingDataPath=/app/scripts/training-data
+      - MICROSOFTML_RESOURCE_PATH=/tmp/MLNET
 
       - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME_ENV}
       - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY_ENV}
