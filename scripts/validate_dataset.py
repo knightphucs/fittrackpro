@@ -4,7 +4,10 @@ from pathlib import Path
 from PIL import Image
 from collections import defaultdict
  
-TRAINING_DATA_DIR = Path("scripts/training-data")
+TRAINING_DATA_DIR = Path(os.environ.get(
+    "TRAINING_DATA_PATH",
+    Path(__file__).parent.parent.parent / "fittrackpro-data" / "training-data"
+))
 MIN_WIDTH  = 100
 MIN_HEIGHT = 100
  

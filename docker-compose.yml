@@ -3,7 +3,7 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: fittrackpro-postgres
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_DB: FitTrackProDb
       POSTGRES_USER: fittrack_user
@@ -24,7 +24,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: fittrackpro-redis
-    restart: always
+    restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
@@ -71,7 +71,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     container_name: fittrackpro-elasticsearch
-    restart: always
+    restart: unless-stopped
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -122,7 +122,7 @@ services:
   mongo:
     image: mongo:7.0
     container_name: fittrackpro-mongo
-    restart: always
+    restart: unless-stopped
     command: ["mongod", "--auth"]
     environment:
       MONGO_INITDB_DATABASE: FitTrackPro_NoSql
@@ -174,10 +174,10 @@ services:
       context: .
       dockerfile: src/FitTrackPro.API/Dockerfile
     container_name: fittrackpro-api
-    restart: always
+    restart: unless-stopped
     volumes:
       - ./uploads:/app/uploads
-      - ./ml-models:/app/MLModels
+      - ./ml-models:/app/ml-models
       # Keep training dataset outside repo to avoid bloating git history.
       # Override TRAINING_DATA_HOST_PATH in your shell/.env when needed.
       - ${TRAINING_DATA_HOST_PATH:-../fittrackpro-data/training-data}:/app/scripts/training-data:ro
@@ -203,7 +203,7 @@ services:
 
       - FileStorage__Provider=${FILE_STORAGE_PROVIDER_ENV}
       - FileStorage__LocalPath=/app/uploads
-      - FoodRecognition__ModelPath=/app/MLModels/food_recognition_model.zip
+      - FoodRecognition__ModelPath=/app/ml-models/food_recognition_model.zip
       - FoodRecognition__TrainingDataPath=/app/scripts/training-data
       - MICROSOFTML_RESOURCE_PATH=/tmp/MLNET
 

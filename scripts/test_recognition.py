@@ -11,7 +11,10 @@ API_BASE   = "http://localhost:5000"
 EMAIL      = "admin@fittrackpro.com"
 PASSWORD   = "Admin@123456"
  
-TEST_DATA_DIR = Path("scripts/training-data")  # dùng lại ảnh training để smoke test
+TEST_DATA_DIR = Path(os.environ.get(
+    "TRAINING_DATA_PATH",
+    Path(__file__).parent.parent.parent / "fittrackpro-data" / "training-data"
+))  # dùng lại ảnh training để smoke test
  
  
 # ─────────────────────────────────────────────────────────

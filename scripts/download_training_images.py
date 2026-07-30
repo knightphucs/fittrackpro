@@ -11,7 +11,10 @@ from ddgs import DDGS
 # ─────────────────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────────────────
-OUTPUT_DIR   = Path("scripts/training-data")
+OUTPUT_DIR   = Path(os.environ.get(
+    "TRAINING_DATA_PATH",
+    Path(__file__).parent.parent.parent / "fittrackpro-data" / "training-data"
+))
 IMAGES_PER_CATEGORY = 70       # Download 70, sau khi filter còn ~60
 MIN_IMAGE_SIZE = (100, 100)    # Loại ảnh quá nhỏ
 MAX_FILE_SIZE_MB = 5

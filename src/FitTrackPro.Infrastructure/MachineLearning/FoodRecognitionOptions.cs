@@ -5,7 +5,7 @@ public class FoodRecognitionOptions
     public const string SectionName = "FoodRecognition";
  
     /// <summary>Đường dẫn tới model .zip (relative hoặc absolute)</summary>
-    public string ModelPath { get; set; } = "MLModels/food_recognition_model.zip";
+    public string ModelPath { get; set; } = "ml-models/food_recognition_model.zip";
  
     /// <summary>Đường dẫn thư mục training data</summary>
     public string TrainingDataPath { get; set; } = "scripts/training-data";
